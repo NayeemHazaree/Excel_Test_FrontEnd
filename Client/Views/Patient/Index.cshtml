@@ -1,0 +1,102 @@
+﻿@using Microsoft.Extensions.Options;
+@inject IOptions<ApplicationConfigurations> OptionsApplicationConfiguration
+@{
+    ViewData["Title"] = "Index";
+}
+
+<div class="border p-3">
+    <div class="row">
+        <div class="col-6">
+            <h2>Patients List</h2>
+        </div>
+        <div class="col-6">
+            <a class="btn btn-primary" style="float: right;" asp-action="Upsert">Create New Patient</a>
+        </div>
+    </div>
+    <br />
+    <div class=" table-responsive">
+        <table id="patient_datatable" class="table table-striped jambo_table table-bordered bulk_action" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Serial No</th>
+                    <th>Patient Name</th>
+                    <th>Disease Name</th>
+                    <th>Epilepsy</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+
+@section Scripts{
+    <script type="text/javascript">
+        var apiServer = "@OptionsApplicationConfiguration.Value.ApiServer";
+        $(document).ready(function () {
+            GetPatientLists();
+        });
+
+        function GetPatientLists() {
+            var i = 1;
+            $('#patient_datatable').DataTable({
+                paging: true,
+                searching: true,
+                destroy: true,
+                ajax: {
+                    url: apiServer + "/Patient/GetAllPatientList",
+                    dataType: 'json',
+                    type: "GET",
+                    dataSrc: ''
+                },
+                columns: [
+                    {
+                        "render": function (data, type, meta) {
+                            return i++;
+                        }
+                    },
+                    { data: 'patientName' },
+                    { data: 'diseaseInformation.diseaseInformationName' },
+                    {
+                        "render": function (data, type, meta) {
+                            return (meta.epilepsy == true) ? "<p>Yes</p>" : "<p>No</p>";
+                        }
+                    },
+                    {
+                        "render": function (data, type, meta) {
+                            return "<button class='PatientEdit btn btn-primary' type='button' data-id='" + meta.patientId + "'><i class='fas fa-edit' aria-hidden='true'></i></button> <button class='PatientRemove btn btn-primary ms-1' type='button' data-id='" + meta.patientId + "'><i class='fa-sharp fa-solid fa-trash' aria-hidden='true'></i></button>"
+                        }
+                    }
+                ]
+            });
+        }
+
+
+        $(document).on("click", ".PatientEdit", function () {
+            patientId = $(this).data('id');
+            window.location.href = "../Patient/Upsert?id=" + patientId;
+        });
+
+        $(document).on("click", ".PatientRemove", function () {
+            patientId = $(this).data('id');
+             if (confirm('Are you sure?')) {
+                $.ajax({
+                    url: apiServer + "/Patient/DeletePatient?patientId=" + patientId,
+                    type: "POST",
+                    datatype: "JSON",
+                    contentType: "application/json",
+                    success: function (response) {
+                        location.reload();
+                    },
+                    error: function (err) {
+                        console.log(err);
+                    }
+                });
+             } 
+             else {
+                  
+                return false;
+             }
+        });
+    </script>
+}
+

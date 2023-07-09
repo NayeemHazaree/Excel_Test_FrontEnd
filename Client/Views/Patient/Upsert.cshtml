@@ -1,0 +1,372 @@
+﻿@using Client.Enum;
+@using Microsoft.Extensions.Options;
+@inject IOptions<ApplicationConfigurations> OptionsApplicationConfiguration
+@{
+    ViewData["Title"] = "Upsert";
+}
+
+<div class="row border p-3 " style="border-color: #00a0df !important;">
+    <div class="col-md-12 col-sm-12">
+        <form class="form-horizontal form-label-left" id="formPatientInformation">
+            <input type="text" disabled hidden id="patientId" class="form-control"/>
+            <div class="row">
+                <div class="col-md-2 mt-2">
+                    <label for="PatientName">
+                        Patient Name<span class="required">*</span>
+                    </label>
+                </div>
+                <div class="col-md-8 mt-2">
+                    <input type="text" id='PatientName' name="PatientName" class="form-control">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 mt-2">
+                    <label for="DiseaseInformation_Id">
+                        Disease Name<span class="required">*</span>
+                    </label>
+                </div>
+                <div class="col-md-8 mt-2">
+                    @Html.DropDownList("DiseaseInformation_Id", new SelectList("", "Value", "Text"), new { @class = "form-control", name = "DiseaseInformation_Id" })
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 mt-2">
+                    <label for="Epilepsy">
+                        Epilepsy<span class="required">*</span>
+                    </label>
+                </div>
+                @{
+                    var yesNoOptions = Enum.GetValues(typeof(YesNo))
+                    .Cast<YesNo>()
+                    .Select(e => new SelectListItem
+                    {
+                        Text = e.ToString(),
+                        Value = ((int)e).ToString()
+                    })
+                    .ToList();
+                }
+                <div class="col-md-8 mt-2">
+                    @Html.DropDownList("Epilepsy", yesNoOptions, "Please select", new { @class = "form-control", name="Epilepsy"})
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 mt-5">
+                    <label for="tbxNcds">
+                        Other NCDs
+                    </label>
+                </div>
+                <div class="col-md-3 mt-2">
+                    <select id="tbxNcds" multiple class="form-control">
+
+                    </select>
+                </div>
+                <div class="col-md-2 mt-4">
+                    <button type="button"  class="btn btn-primary" id="btnAdd" style="width:60%;cursor:pointer;">
+                        Add >
+                    </button>
+                    <button type="button" style="cursor:pointer" id="btnRemove" class="btn btn-danger mt-1">
+                        < Remove
+                    </button>
+                </div>
+                <div class="col-md-3 mt-2">
+                    <select name="ddlNcd" id="ddlNcd" multiple class="form-control">
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-2 mt-5">
+                    <label for="tbxAllergies">
+                        Allergies
+                    </label>
+                </div>
+                <div class="col-md-3 mt-2">
+                    <select id="tbxAllergies" multiple class="form-control">
+                    </select>
+                </div>
+                <div class="col-md-2 mt-4">
+                    <button type="button" class="btn btn-primary" id="btnAddAllergies" style="width:60%;cursor:pointer;">
+                        Add >
+                    </button>
+                    <button type="button" style="cursor:pointer" id="btnRemoveAllergies" class="btn btn-danger mt-1">
+                        < Remove
+                    </button>
+                </div>
+                <div class="col-md-3 mt-2">
+                    <select name="ddlAllergies" id="ddlAllergies" multiple class="form-control">
+                    </select>
+                </div>
+            </div>
+
+            <div class="text-center mt-5">
+                <button type="button" class="btn btn-info" style="cursor:pointer" onclick="savePatient()">Save</button>
+            </div>
+            
+        </form>
+    </div>
+</div>
+
+
+@section Scripts{
+    <script>
+        var apiServer = "@OptionsApplicationConfiguration.Value.ApiServer";
+        var id = '@ViewBag.Id';
+
+        $(document).ready(function() {
+            GetAllDisease();
+            GetAllNCDs();
+            GetAllAllergies();
+            if (id != '00000000-0000-0000-0000-000000000000') {
+                document.getElementById('patientId').value = id;
+                getPatientNcdDetails(id);
+                getPatientAllergiesDetails(id)
+                getPatientInformation(id);
+            }
+        });
+
+        // Change Other NCDs value from one dropdown to another dropdown
+        $('#btnAdd').on('click', function () {
+            $('#tbxNcds option:selected').appendTo('#ddlNcd');
+        });
+
+        $('#btnRemove').on('click', function () {
+            $('#ddlNcd option:selected').appendTo('#tbxNcds');
+        });
+
+        // Change Other Allergis value from one dropdown to another dropdown
+        $('#btnAddAllergies').on('click', function () {
+            $('#tbxAllergies option:selected').appendTo('#ddlAllergies');
+        });
+
+        $('#btnRemoveAllergies').on('click', function () {
+            $('#ddlAllergies option:selected').appendTo('#tbxAllergies');
+        });
+
+        function GetAllDisease() {
+            $.ajax({
+                url: apiServer + "/Disease/GetAllDiseaseInformation",
+                type: "GET",
+                datatype: "JSON",
+                contentType: "application/json",
+                success: function (response) {
+                    for (var i = 0; i < response.length; i++) {
+                        $("#DiseaseInformation_Id").get(0).options[i] = new Option(response[i].diseaseInformationName, response[i].diseaseInformationId, i);
+                    }
+                },
+                error: function (err) {
+                    console.log(err);
+                }
+            });
+        }
+
+        function GetAllNCDs() {
+            $.ajax({
+                url: apiServer + "/Disease/GetAllNCDs",
+                type: "GET",
+                datatype: "JSON",
+                contentType: "application/json",
+                success: function (response) {
+                    NCDLists = response;
+                    for (var i = 0; i < response.length; i++) {
+                        $("#tbxNcds").get(0).options[i] = new Option(response[i].ncdName, response[i].ncdid, i);
+                    }
+                },
+                error: function (err) {
+                    console.log(err);
+                }
+            });
+        }
+
+        function GetAllAllergies() {
+            $.ajax({
+                url: apiServer + "/Disease/GetAllAllergies",
+                type: "GET",
+                datatype: "JSON",
+                contentType: "application/json",
+                success: function (response) {
+                    AllergisList = response;
+                    for (var i = 0; i < response.length; i++) {
+                        $("#tbxAllergies").get(0).options[i] = new Option(response[i].allergiesName, response[i].allergiesID, i);
+                    }
+                },
+                error: function (err) {
+                    console.log(err);
+                }
+            });
+        }
+
+        function savePatient(){
+            var formDataModel = {
+                "patientId": "",
+                "patientName": "",
+                "diseaseInformation_Id": "",
+                "epilepsy": "",
+                "ncDs": [],
+                "allergies":[]
+            };
+            if(id == "00000000-0000-0000-0000-000000000000"){
+                formDataModel.patientId = "00000000-0000-0000-0000-000000000000";
+            }
+            else{
+                formDataModel.patientId = $('#patientId').val();
+            }
+            formDataModel.patientName = $('#PatientName').val();
+            formDataModel.diseaseInformation_Id = $('#DiseaseInformation_Id').val();
+            formDataModel.epilepsy = $('#Epilepsy').val() === '1' ? true : false;
+
+            $("#ddlNcd option").each(function () {
+                var value = $(this).val();
+                var name = $(this).text();
+                formDataModel.ncDs.push({ "NCDID": value, "NCDName": name });
+            });
+
+            $("#ddlAllergies option").each(function () {
+                var value = $(this).val();
+                var name = $(this).text();
+                formDataModel.allergies.push({ "AllergiesID": value, "AllergiesName": name });
+            });
+
+            var Data = JSON.stringify(formDataModel);
+
+            if (formDataModel.PatientName == '' || formDataModel.DiseaseInformation_Id == '' || formDataModel.Epilepsy == '') {
+                alert("Please Fill the rquired fields");
+                return;
+            }
+
+            $.ajax({
+                url: apiServer + "/Patient/UpsertPatient",
+                dataType: "json",
+                processData: false,
+                contentType: 'application/json',
+                type: "POST",
+                data: Data,
+                success: function (response) {
+                    alert("Success!");
+                    window.location.href = "../Patient";
+                },
+                error: function (err) {
+                    console.log(err);
+                }
+            });
+        }
+
+        function getPatientInformation(pId){
+            $.ajax({
+                url: apiServer + "/Patient/GetPatientInformation?id=" + pId,
+                type: "GET",
+                datatype: "JSON",
+                contentType: "application/json",
+                success: function (response) {
+                    console.log(response);
+                    setData(response);
+                    //setNcdAllergiesValues(id);
+                },
+                error: function (err) {
+                    console.log(err);
+                }
+            });
+        }
+
+        function setData(data) {
+            $('#PatientName').val(data.patientName);
+            $('#patientId').val(data.patientId);
+            $('#Epilepsy').val(data.epilepsy == true ? 1 : 0);
+            $('#DiseaseInformation_Id').val(data.diseaseInformation_Id);
+        }
+
+        function getPatientNcdDetails(pId){
+            $.ajax({
+                url: apiServer + "/Disease/GetNCD_DetailsByPatientId?Id=" + pId,
+                type: "GET",
+                datatype: "JSON",
+                contentType: "application/json",
+                success: function (response) {
+                    //calling get all ncd again to take the datas and add in selected dropdown
+                    $.ajax({
+                        url: apiServer + "/Disease/GetAllNCDs",
+                        type: "GET",
+                        datatype: "JSON",
+                        contentType: "application/json",
+                        success: function (NCDresponse) {
+                            var matchingObjects = response.filter(function (item) {
+                                return NCDresponse.some(function (value) {
+                                    return value.ncdid === item.ncdid;
+                                });
+                            }).map(function (item) {
+                                var matchedValue = NCDresponse.find(function (value) {
+                                    return value.ncdid === item.ncdid;
+                                });
+                                return { ncdid: item.ncdid, ncdName: matchedValue.ncdName };
+                            });
+
+                            var ncdDDLAll = $("#tbxNcds");
+                            var ncdDDLSaved = document.getElementById("ddlNcd");
+
+                            // Adding saved values to right side dropdown
+                            matchingObjects.forEach(function (item) {
+                                var option = document.createElement("option");
+                                option.value = item.ncdid;
+                                option.text = item.ncdName;
+                                ncdDDLSaved.appendChild(option);
+
+                                // Remove matching values from left side dropdown
+                                ncdDDLAll.find("option[value='" + item.ncdid + "']").remove();
+                            });
+                        }
+                    });
+                },
+                error: function (err) {
+                    console.log(err);
+                }
+            });
+        }
+
+        function getPatientAllergiesDetails(pId) {
+            $.ajax({
+                url: apiServer + "/Disease/GetAllergies_DetailsByPatientId?Id=" + pId,
+                type: "GET",
+                datatype: "JSON",
+                contentType: "application/json",
+                success: function (response) {
+                    //calling get all Allergies again to take the datas and add in Right dropdown
+                    $.ajax({
+                        url: apiServer + "/Disease/GetAllAllergies",
+                        type: "GET",
+                        datatype: "JSON",
+                        contentType: "application/json",
+                        success: function (AllergiesResponse) {
+                            var matchingObjects = response.filter(function (item) {
+                                return AllergiesResponse.some(function (value) {
+                                    return value.allergiesID === item.allergiesID;
+                                });
+                            }).map(function (item) {
+                                var matchedValue = AllergiesResponse.find(function (value) {
+                                    return value.allergiesID === item.allergiesID;
+                                });
+                                return { allergiesID: item.allergiesID, allergiesName: matchedValue.allergiesName };
+                            });
+
+                            var allergiesDDLAll = $("#tbxAllergies");
+                            var allergiesDDLSaved = document.getElementById("ddlAllergies");
+
+                            // Adding saved values to right side dropdown
+                            matchingObjects.forEach(function (item) {
+                                var option = document.createElement("option");
+                                option.value = item.allergiesID;
+                                option.text = item.allergiesName;
+                                allergiesDDLSaved.appendChild(option);
+
+                                // Remove matching values from left side dropdown
+                                allergiesDDLAll.find("option[value='" + item.allergiesID + "']").remove();
+                            });
+                        }
+                    });
+                },
+                error: function (err) {
+                    console.log(err);
+                }
+            });
+        }
+    </script>
+}
+
